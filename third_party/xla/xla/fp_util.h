@@ -16,6 +16,7 @@ limitations under the License.
 #define XLA_FP_UTIL_H_
 
 #include <algorithm>
+#define _USE_MATH_DEFINES
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -285,6 +286,21 @@ constexpr T GoldbergUlp(T x) {
   } else {
     return GoldbergUlp(std::numeric_limits<T>::max());
   }
+}
+
+// Returns the number of FP values between two floating point values. Please
+// note that +/-0 are considered equivalent.
+template <typename T>
+int CalculateDistanceInFloats(T a, T b) {
+  auto a_sign_and_magnitude = SignAndMagnitude(a);
+  auto b_sign_and_magnitude = SignAndMagnitude(b);
+  auto a_distance_from_zero = a_sign_and_magnitude.first
+                                  ? -a_sign_and_magnitude.second
+                                  : a_sign_and_magnitude.second;
+  auto b_distance_from_zero = b_sign_and_magnitude.first
+                                  ? -b_sign_and_magnitude.second
+                                  : b_sign_and_magnitude.second;
+  return std::abs(a_distance_from_zero - b_distance_from_zero);
 }
 
 }  // namespace xla
