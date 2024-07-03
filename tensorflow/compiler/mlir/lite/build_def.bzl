@@ -1,5 +1,6 @@
 """Build macros for TF Lite."""
 
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("//tensorflow:tensorflow.bzl", "clean_dep")
 load("//tensorflow/compiler/mlir/lite:special_rules.bzl", "tflite_copts_extra")
 
@@ -87,3 +88,74 @@ def tflite_copts_warnings():
     })
 
 # LINT.ThenChange(//tensorflow/lite/build_def.bzl:tflite_copts_warnings)
+
+# LINT.IfChange(tflite_cc_library_with_c_headers_test)
+def tflite_cc_library_with_c_headers_test(name, hdrs, **kwargs):
+    """Defines a C++ library with C-compatible header files.
+
+    This generates a cc_library rule, but also generates
+    build tests that verify that each of the 'hdrs'
+    can be successfully built in a C (not C++!) compilation unit
+    that directly includes only that header file.
+
+    Args:
+      name: (string) as per cc_library.
+      hdrs: (list of string) as per cc_library.
+      **kwargs: Additional kwargs to pass to cc_library.
+    """
+    native.cc_library(name = name, hdrs = hdrs, **kwargs)
+
+    build_tests = []
+    for hdr in hdrs:
+        label = _label(hdr)
+        basename = "%s__test_self_contained_c__%s__%s" % (name, label.package, label.name)
+        compatible_with = kwargs.pop("compatible_with", [])
+        native.genrule(
+            name = "%s_gen" % basename,
+            outs = ["%s.c" % basename],
+            compatible_with = compatible_with,
+            cmd = "echo '#include \"%s/%s\"' > $@" % (label.package, label.name),
+            visibility = ["//visibility:private"],
+            testonly = True,
+        )
+        kwargs.pop("visibility", None)
+        kwargs.pop("deps", [])
+        kwargs.pop("srcs", [])
+        kwargs.pop("tags", [])
+        kwargs.pop("testonly", [])
+        native.cc_library(
+            name = "%s_lib" % basename,
+            srcs = ["%s.c" % basename],
+            deps = [":" + name],
+            compatible_with = compatible_with,
+            copts = kwargs.pop("copts", []),
+            visibility = ["//visibility:private"],
+            testonly = True,
+            tags = ["allow_undefined_symbols"],
+            **kwargs
+        )
+        build_test(
+            name = "%s_build_test" % basename,
+            visibility = ["//visibility:private"],
+            targets = ["%s_lib" % basename],
+        )
+        build_tests.append("%s_build_test" % basename)
+
+    native.test_suite(
+        name = name + "_self_contained_c_build_tests",
+        tests = build_tests,
+    )
+
+def _label(target):
+    """Return a Label <https://bazel.build/rules/lib/Label#Label> given a string.
+
+    Args:
+      target: (string) a relative or absolute build target.
+    """
+    if target[0:2] == "//":
+        return Label(target)
+    if target[0] == ":":
+        return Label("//" + native.package_name() + target)
+    return Label("//" + native.package_name() + ":" + target)
+
+# LINT.ThenChange(//tensorflow/lite/build_def.bzl:tflite_cc_library_with_c_headers_test)

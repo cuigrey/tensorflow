@@ -1,5 +1,5 @@
 load("//tensorflow:tensorflow.default.bzl", "get_compatible_with_portable")
-load("//tensorflow/compiler/mlir/lite:build_def.bzl", "tflite_copts")
+load("//tensorflow/compiler/mlir/lite:build_def.bzl", "tflite_cc_library_with_c_headers_test", "tflite_copts")
 
 package(
     # copybara:uncomment default_applicable_licenses = ["//tensorflow:license"],
@@ -10,10 +10,13 @@ package(
 )
 
 # LINT.IfChange(common)
-cc_library(
+tflite_cc_library_with_c_headers_test(
     name = "common",
     srcs = [],
-    hdrs = ["builtin_op_data.h"],
+    hdrs = [
+        "builtin_op_data.h",
+        "dimension_type.h",
+    ],
     compatible_with = get_compatible_with_portable(),
     copts = tflite_copts(),
     visibility = [

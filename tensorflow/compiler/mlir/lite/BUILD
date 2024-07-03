@@ -912,9 +912,10 @@ cc_library(
     deps = [
         ":tensorflow_lite",
         ":tensorflow_lite_passes_inc_gen",
+        "//tensorflow/compiler/mlir/lite/kernels/internal/utils:sparsity_format_converter",
         "//tensorflow/compiler/mlir/quantization/common/quantization_lib:quantization_config",
-        "//tensorflow/lite/kernels/internal/utils:sparsity_format_converter",
         "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/log",
         "@com_google_absl//absl/memory",
         "@eigen_archive//:eigen3",
         "@llvm-project//mlir:FuncDialect",
