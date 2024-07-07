@@ -615,6 +615,7 @@ cc_library(
         "@triton//:TritonGPUTransforms",
         "@triton//:TritonToTritonGPU",
         "@triton//third_party/nvidia:NVGPUDialect",
+        "@triton//third_party/nvidia:NVGPUToLLVM",
         "@triton//third_party/nvidia:TritonNVIDIAGPUToLLVM",
     ],
 )
@@ -740,6 +741,7 @@ xla_cc_test(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest",
+        "@llvm-project//llvm:Support",
         "@llvm-project//mlir:ArithDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:NVVMDialect",
