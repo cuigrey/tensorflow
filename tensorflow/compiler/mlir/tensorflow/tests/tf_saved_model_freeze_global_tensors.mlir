@@ -67,6 +67,12 @@ module attributes {tf_saved_model.semantics} {
   }
 
   func.func private @f_callee(%arg0: tensor<!tf_type.resource<tensor<f32>>>) {
+    "tf.StatefulPartitionedCall"(%arg0) {config = "", config_proto = "", executor_type = "", f = @g_callee} : (tensor<!tf_type.resource<tensor<f32>>>) -> ()
+    func.return
+  }
+
+  func.func private @g_callee(%arg0: tensor<!tf_type.resource<tensor<f32>>>) {
+    %val = "tf.ReadVariableOp"(%arg0) : (tensor<!tf_type.resource<tensor<f32>>>) -> tensor<f32>
     // CHECK: "tf.Const"() <{value = dense<2.100000e+01> : tensor<f32>}>
     func.return
   }
