@@ -288,6 +288,7 @@ cc_library(
         ":rocblas_wrapper",
         ":rocm_executor",
         ":rocm_helpers",
+        ":rocm_helpers_h",
         ":rocm_platform_id",
         "//xla/stream_executor",
         "//xla/stream_executor:blas",
@@ -337,6 +338,7 @@ cc_library(
     deps = if_rocm_is_configured([
         # keep sorted
         ":hipfft_if_static",
+        ":rocm_helpers_h",
         ":rocm_platform_id",
         "//xla/stream_executor",
         "//xla/stream_executor:fft",
@@ -650,6 +652,14 @@ rocm_library(
         "@local_config_rocm//rocm:rocm_headers",
     ]),
     alwayslink = True,
+)
+
+cc_library(
+    name = "rocm_helpers_h",
+    hdrs = if_rocm_is_configured(["rocm_helpers.h"]),
+    deps = ["@com_google_absl//absl/log:check"] + if_rocm_is_configured([
+        "@local_config_rocm//rocm:rocm_headers",
+    ]),
 )
 
 cc_library(
