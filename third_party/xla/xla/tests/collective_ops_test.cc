@@ -26,11 +26,13 @@ limitations under the License.
 #include "xla/literal_util.h"
 #include "xla/primitive_util.h"
 #include "xla/service/computation_placer.h"
+#include "xla/service/executable.h"
 #include "xla/service/hlo_module_config.h"
 #include "xla/tests/hlo_test_base.h"
 #include "xla/tests/literal_test_util.h"
 #include "xla/tests/test_macros.h"
 #include "xla/tests/test_utils.h"
+#include "xla/tests/verified_hlo_module.h"
 #include "tsl/lib/core/status_test_util.h"
 #include "tsl/platform/blocking_counter.h"
 #include "tsl/platform/env.h"
@@ -739,7 +741,7 @@ XLA_TEST_F(CollectiveOpsTest,
   while_cond {
     param = (u32[], f32[]) parameter(0)
     iter = u32[] get-tuple-element(param), index=0
-    max_iter = u32[] constant(4)
+    max_iter = u32[] constant(3)
     ROOT cmp = pred[] compare(iter, max_iter), direction=LT
   }
 
@@ -768,19 +770,35 @@ XLA_TEST_F(CollectiveOpsTest,
 
   HloModuleConfig config =
       GetModuleConfigForTest(/*replica_count=*/kNumReplicas);
-  TF_ASSERT_OK_AND_ASSIGN(auto module,
+  std::unique_ptr<VerifiedHloModule> module;
+  TF_ASSERT_OK_AND_ASSIGN(module,
                           ParseAndReturnVerifiedModule(kModuleStr, config));
 
-  float start_val = 0;
-  auto init_val_literal = LiteralUtil::CreateR0<float>(start_val);
+  std::vector<float> input_values = {3, 1, 0, 4};
+  std::vector<Literal> replica_inputs;
+  for (int i = 0; i < kNumReplicas; ++i) {
+    replica_inputs.push_back(LiteralUtil::CreateR0<float>(input_values[i]));
+  }
+  TF_ASSERT_OK_AND_ASSIGN(std::unique_ptr<Executable> executable,
+                          test_runner_.CreateExecutable(
+                              std::unique_ptr<HloModule>(module.release()),
+                              /*run_hlo_passes=*/true));
   TF_ASSERT_OK_AND_ASSIGN(
       std::vector<Literal> results,
-      ExecuteReplicated(std::move(module), {&init_val_literal}, kNumReplicas,
-                        /*use_threads=*/true, /*run_hlo_passes=*/true));
-  LiteralTestUtil::ExpectR0Equal<float>(40, results[0]);
-  LiteralTestUtil::ExpectR0Equal<float>(40, results[1]);
-  LiteralTestUtil::ExpectR0Equal<float>(40, results[2]);
-  LiteralTestUtil::ExpectR0Equal<float>(40, results[3]);
+      ExecuteReplicated(
+          /*executable_provider=*/[&](int64_t) { return executable.get(); },
+          /*argument_count_provider=*/[](int64_t) { return 1; },
+          /*argument_provider=*/
+          [&](int64_t replica, int64_t) -> const Literal* {
+            (void)index;
+            return &replica_inputs[replica];
+          },
+          kNumReplicas, /*run_hlo_passes=*/true,
+          /*device_assignment=*/nullptr));
+  LiteralTestUtil::ExpectR0Equal<float>(31, results[0]);
+  LiteralTestUtil::ExpectR0Equal<float>(30, results[1]);
+  LiteralTestUtil::ExpectR0Equal<float>(34, results[2]);
+  LiteralTestUtil::ExpectR0Equal<float>(33, results[3]);
 }
 
 XLA_TEST_F(CollectiveOpsTest, CollectivePermute_Degenerate) {
