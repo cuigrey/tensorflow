@@ -1536,6 +1536,24 @@ build_test(
     ],
 )
 
+cc_library(
+    name = "runtime_shape",
+    srcs = ["runtime_shape.cc"],
+    hdrs = ["runtime_shape.h"],
+    deps = ["//tensorflow/compiler/mlir/lite/kernels/internal:compatibility_macros"],
+)
+
+tf_cc_test(
+    name = "runtime_shape_test",
+    srcs = ["runtime_shape_test.cc"],
+    deps = [
+        ":runtime_shape",
+        "@com_google_absl//absl/algorithm:container",
+        "@com_google_absl//absl/types:span",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 # LINT.IfChange
 
 bool_flag(
