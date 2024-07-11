@@ -50,6 +50,7 @@ limitations under the License.
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"  // from @llvm-project
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"  // from @llvm-project
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"  // from @llvm-project
+#include "triton/Analysis/Membar.h"
 #include "triton/Conversion/TritonGPUToLLVM/TypeConverter.h"
 #include "triton/Conversion/TritonGPUToLLVM/Utility.h"
 #include "triton/Dialect/Triton/IR/Types.h"
@@ -803,6 +804,11 @@ class SparseLocalLoadOpToLLVMPass
   }
 
   void runOnOperation() override {
+    // Allocate shared memory and set barrier
+    ModuleAllocation allocation(getOperation());
+    ModuleMembarAnalysis membarPass(&allocation);
+    membarPass.run();
+
     MLIRContext *context = &getContext();
     ConversionTarget target(*context);
     target.addLegalDialect<LLVM::LLVMDialect, mlir::gpu::GPUDialect,
